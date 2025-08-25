@@ -10,7 +10,7 @@ This is a WhatsApp bot built using the Baileys library for group management, inc
 
 <div align="center">
   <a href="https://whatsapp.com/channel/0029VbAxkJl0lwgqAOojKI3R">
-    <img src="https://github.com/Jeffreyfx1/jfx-md-x-bot/blob/main/assets/bot_image.jpg" alt="JFX MD-X" height="300">
+    <img src="https://github.com/Jeffreyfx1/jfx-md-x-v2/blob/main/assets/alive.jpg" alt="JFX MD-X" height="300">
   </a>
 </div>
 
