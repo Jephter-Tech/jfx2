@@ -19,10 +19,21 @@ async function githubCommand(sock, chatId, message) {
     txt += `⪩⪨  *ꜱᴛᴀʀꜱ* : 50000\n\n`;
     txt += `💥 *ᴊꜰx ᴍᴅ-x*`;
 
-    const imgPath = path.join(__dirname, '../assets/bot_image.jpg');
-    const imgBuffer = fs.readFileSync(imgPath);
+    // 🔄 Load all images in assets folder
+    const assetsDir = path.join(__dirname, '../assets');
+    const files = fs.readdirSync(assetsDir).filter(f => /\.(jpg|jpeg|png)$/i.test(f));
 
-    await sock.sendMessage(chatId, { image: imgBuffer, caption: txt }, { quoted: message });
+    if (files.length > 0) {
+      // pick a random image
+      const randomImage = files[Math.floor(Math.random() * files.length)];
+      const imgPath = path.join(assetsDir, randomImage);
+      const imgBuffer = fs.readFileSync(imgPath);
+
+      await sock.sendMessage(chatId, { image: imgBuffer, caption: txt }, { quoted: message });
+    } else {
+      // fallback if no image found
+      await sock.sendMessage(chatId, { text: txt }, { quoted: message });
+    }
 
     // 🔊 Send audio response
     const audioBuffer = fs.readFileSync('./audio/repo.mp3');
@@ -33,6 +44,7 @@ async function githubCommand(sock, chatId, message) {
     }, { quoted: message });
 
   } catch (error) {
+    console.error('Error in githubCommand:', error);
     await sock.sendMessage(chatId, { text: '❌ Error fetching repository information.' }, { quoted: message });
   }
 }

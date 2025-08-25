@@ -5,6 +5,10 @@
     "120363372115176433@g.us": {
       "enabled": true,
       "action": "delete"
+    },
+    "120363404034944998@g.us": {
+      "enabled": true,
+      "action": "delete"
     }
   },
   "antibadword": {},

@@ -11,6 +11,7 @@ const format = sizeFormatter({
   render: (literal, symbol) => `${literal} ${symbol}B`,
 });
 
+// ⏱ Format uptime
 function formatTime(seconds) {
   const days = Math.floor(seconds / (24 * 60 * 60));
   seconds %= 24 * 60 * 60;
@@ -30,8 +31,21 @@ function formatTime(seconds) {
 
 async function pingCommand(sock, chatId, message) {
   try {
+    // Newsletter forwarding info
+    const channelInfo = {
+      contextInfo: {
+        forwardingScore: 1,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterJid: "120363420646690174@newsletter", // your channel JID
+          newsletterName: "𝐉𝐅𝐗 𝐌𝐃-𝐗",
+          serverMessageId: -1
+        }
+      }
+    };
+
     const start = Date.now();
-    await sock.sendMessage(chatId, { text: 'Pong!' }, { quoted: message });
+    await sock.sendMessage(chatId, { text: 'Pong!', ...channelInfo }, { quoted: message });
     const end = Date.now();
     const ping = Math.round((end - start) / 2);
 
@@ -61,24 +75,37 @@ async function pingCommand(sock, chatId, message) {
 ✦ Memory Info : ${memoryFormatted}
 ┗━━━━━━━━━━━━━━━┛`.trim();
 
-    // 🖼 Send image with caption
+    // 🖼 Send image with caption (forwarded)
     const imageBuffer = fs.readFileSync(path.join(__dirname, '../assets/ping.jpg'));
     await sock.sendMessage(chatId, {
       image: imageBuffer,
-      caption: botInfo
+      caption: botInfo,
+      ...channelInfo
     }, { quoted: message });
 
-    // 🔊 Send audio response
+    // 🔊 Send audio response (forwarded)
     const audioBuffer = fs.readFileSync('./audio/ping.mp3');
     await sock.sendMessage(chatId, {
       audio: audioBuffer,
       mimetype: 'audio/mpeg',
-      ptt: true
+      ptt: true,
+      ...channelInfo
     }, { quoted: message });
 
   } catch (error) {
     console.error('Error in ping command:', error);
-    await sock.sendMessage(chatId, { text: '❌ Failed to get bot status.' });
+    await sock.sendMessage(chatId, { 
+      text: '❌ Failed to get bot status.',
+      contextInfo: {
+        forwardingScore: 1,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterJid: "120363420646690174@newsletter",
+          newsletterName: "ᴊꜰx ᴍᴅ-xᴠ2",
+          serverMessageId: -1
+        }
+      }
+    }, { quoted: message });
   }
 }
 

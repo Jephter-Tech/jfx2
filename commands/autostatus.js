@@ -21,6 +21,20 @@ if (!fs.existsSync(configPath)) {
     fs.writeFileSync(configPath, JSON.stringify({ enabled: false }));
 }
 
+// 📂 Utility function to pick a random image
+function getRandomImage() {
+    const assetsDir = path.join(__dirname, '../assets');
+    if (!fs.existsSync(assetsDir)) return null;
+
+    const files = fs.readdirSync(assetsDir)
+        .filter(file => /\.(jpg|jpeg|png|gif)$/i.test(file)); // only images
+
+    if (files.length === 0) return null;
+
+    const randomFile = files[Math.floor(Math.random() * files.length)];
+    return path.join(assetsDir, randomFile);
+}
+
 async function autoStatusCommand(sock, chatId, msg, args) {
     try {
         // Check if sender is owner
@@ -35,13 +49,23 @@ async function autoStatusCommand(sock, chatId, msg, args) {
         // Read current config
         let config = JSON.parse(fs.readFileSync(configPath));
 
-        // If no arguments, show current status
+        // If no arguments, show current status (with random image attached)
         if (!args || args.length === 0) {
             const status = config.enabled ? 'ᴇɴᴀʙʟᴇᴅ' : 'ᴅɪꜱᴀʙʟᴇᴅ';
-            await sock.sendMessage(chatId, { 
-                text: `🔄 *ᴀᴜᴛᴏ ꜱᴛᴀᴛᴜꜱ ᴠɪᴇᴡ*\n\nᴄᴜʀʀᴇɴᴛ ꜱᴛᴀᴛᴜꜱ: ${status}\n\nᴜꜱᴇ:\n.ᴀᴜᴛᴏꜱᴛᴀᴛᴜꜱ ᴏɴ - ᴇɴᴀʙʟᴇ ᴀᴜᴛᴏ ꜱᴛᴀᴛᴜꜱ ᴠɪᴇᴡ\n.ᴀᴜᴛᴏꜱᴛᴀᴛᴜꜱ ᴏꜰꜰ - ᴅɪꜱᴀʙʟᴇ ᴀᴜᴛᴏ ꜱᴛᴀᴛᴜꜱ ᴠɪᴇᴡ`,
-                ...channelInfo
-            });
+
+            const imgPath = getRandomImage();
+            if (imgPath) {
+                await sock.sendMessage(chatId, { 
+                    image: fs.readFileSync(imgPath),
+                    caption: `🔄 *ᴀᴜᴛᴏ ꜱᴛᴀᴛᴜꜱ ᴠɪᴇᴡ*\n\nᴄᴜʀʀᴇɴᴛ ꜱᴛᴀᴛᴜꜱ: ${status}\n\nᴜꜱᴇ:\n.ᴀᴜᴛᴏꜱᴛᴀᴛᴜꜱ ᴏɴ - ᴇɴᴀʙʟᴇ ᴀᴜᴛᴏ ꜱᴛᴀᴛᴜꜱ ᴠɪᴇᴡ\n.ᴀᴜᴛᴏꜱᴛᴀᴛᴜꜱ ᴏꜰꜰ - ᴅɪꜱᴀʙʟᴇ ᴀᴜᴛᴏ ꜱᴛᴀᴛᴜꜱ ᴠɪᴇᴡ`,
+                    ...channelInfo
+                });
+            } else {
+                await sock.sendMessage(chatId, { 
+                    text: `🔄 *ᴀᴜᴛᴏ ꜱᴛᴀᴛᴜꜱ ᴠɪᴇᴡ*\n\nᴄᴜʀʀᴇɴᴛ ꜱᴛᴀᴛᴜꜱ: ${status}\n\n(No images found in assets/)`,
+                    ...channelInfo
+                });
+            }
             return;
         }
 
@@ -76,91 +100,3 @@ async function autoStatusCommand(sock, chatId, msg, args) {
         });
     }
 }
-
-// Function to check if auto status is enabled
-function isAutoStatusEnabled() {
-    try {
-        const config = JSON.parse(fs.readFileSync(configPath));
-        return config.enabled;
-    } catch (error) {
-        console.error('Error checking auto status config:', error);
-        return false;
-    }
-}
-
-// Function to handle status updates
-async function handleStatusUpdate(sock, status) {
-    try {
-        if (!isAutoStatusEnabled()) {
-            return;
-        }
-
-        // Add delay to prevent rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Handle status from messages.upsert
-        if (status.messages && status.messages.length > 0) {
-            const msg = status.messages[0];
-            if (msg.key && msg.key.remoteJid === 'status@broadcast') {
-                try {
-                    await sock.readMessages([msg.key]);
-                    const sender = msg.key.participant || msg.key.remoteJid;
-                   // console.log(`✅ Status Viewed `);
-                } catch (err) {
-                    if (err.message?.includes('rate-overlimit')) {
-                        console.log('⚠️ Rate limit hit, waiting before retrying...');
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                        await sock.readMessages([msg.key]);
-                    } else {
-                        throw err;
-                    }
-                }
-                return;
-            }
-        }
-
-        // Handle direct status updates
-        if (status.key && status.key.remoteJid === 'status@broadcast') {
-            try {
-                await sock.readMessages([status.key]);
-                const sender = status.key.participant || status.key.remoteJid;
-                console.log(`✅ Viewed status from: ${sender.split('@')[0]}`);
-            } catch (err) {
-                if (err.message?.includes('rate-overlimit')) {
-                    console.log('⚠️ Rate limit hit, waiting before retrying...');
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    await sock.readMessages([status.key]);
-                } else {
-                    throw err;
-                }
-            }
-            return;
-        }
-
-        // Handle status in reactions
-        if (status.reaction && status.reaction.key.remoteJid === 'status@broadcast') {
-            try {
-                await sock.readMessages([status.reaction.key]);
-                const sender = status.reaction.key.participant || status.reaction.key.remoteJid;
-                console.log(`✅ Viewed status from: ${sender.split('@')[0]}`);
-            } catch (err) {
-                if (err.message?.includes('rate-overlimit')) {
-                    console.log('⚠️ Rate limit hit, waiting before retrying...');
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    await sock.readMessages([status.reaction.key]);
-                } else {
-                    throw err;
-                }
-            }
-            return;
-        }
-
-    } catch (error) {
-        console.error('❌ Error in auto status view:', error.message);
-    }
-}
-
-module.exports = {
-    autoStatusCommand,
-    handleStatusUpdate
-};
